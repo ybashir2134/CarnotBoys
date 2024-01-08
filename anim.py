@@ -55,8 +55,6 @@ def entliq_extrap(temp):
 
 
 
-temp = 100
-ltemp = 60
 
 def caref(coltemp, hotemp):
     return 1 - (coltemp/hotemp)
@@ -84,54 +82,82 @@ def isothermal_rejection(temp,ltemp):
     final_spvolume = (new_x*(satvap_extrap(ltemp)-satliq_extrap(ltemp)))+satliq_extrap(ltemp)
     return new_x, final_spvolume, inits, press
 
+ltemp = 60
+temp = 100
+
 carof = caref(ltemp, temp)
 initpres, initvol, finvol, initent, finent = isothermal_addition(temp)
 _, _, qual, qual_phase, fin_press, _ = adiabatic_expansion(temp, ltemp)
 new_qual, new_phase, _, _ = isothermal_rejection(temp, ltemp)
 
+
+
+
+'''
 print(f'Your input temperatures {temp} and {ltemp} \n \t During Stage 1, \n \t initial Pressure:{initpres}, \n \t initial specific volume:{initvol},\n\t initial specific entropy {initent}')
 print(f'At stage 2,\n \t the pressure is same, \n \t the specific volume = {finvol}, \n \t the specific entropy = {finent}')
 print(f'At Stage 3, \n \t the pressure is {fin_press}, \n \t liquid quality is {qual}, \n \t the specific volume is {qual_phase}, \n \t the specific entropy is the same')
 print(f'At stage 4, pressure is same, \n \t the entropy is same as initial, \n \t the final specifc volume is {new_phase}, \n \t the new quality is {new_qual}')
-
+'''
 import numpy as np
 import matplotlib.pyplot as plt
 from matplotlib.animation import FuncAnimation
 
-print(f'Initial value {initvol} and final value {finvol}')
+steps12 = np.linspace(ltemp, temp, 21)
+temp_range1 = steps12[1:20]  # or adjust according to your requirement
+temp_range2 = temp_range1[::-1]
 
-volrang1 = np.linspace(initvol, finvol, 10)
-volrang2 = np.linspace(finvol, qual_phase, 10)
-volrang3 = np.linspace(qual_phase, new_phase, 10)
-volrang4 = np.linspace(new_phase, initvol, 10)
+phase2 = [((((finent-entliq_extrap(i))/(entvap_extrap(i) - entliq_extrap(i)))*(satvap_extrap(i)-satliq_extrap(i)))+satliq_extrap(i)) for i in temp_range2]
+phase4 = [((((initent-entliq_extrap(i))/(entvap_extrap(i) - entliq_extrap(i)))*(satvap_extrap(i)-satliq_extrap(i)))+satliq_extrap(i)) for i in temp_range1]
+press2 = [pres_extrap(i) for i in temp_range2]
 
-pressrang1 = [initpres] * 10
-pressrang2 = np.linspace(initpres,fin_press,10)
-pressrang3 = [fin_press] * 10
-pressrang4 = np.linspace(fin_press, initpres, 10)
 
-x = [item for sublist in [volrang1,volrang2,volrang3,volrang4] for item in sublist]
-y = [item for sublist in [pressrang1, pressrang2,pressrang3, pressrang4] for item in sublist]
 
-x_show = []
-y_show = []
+def plotter(iv, fv, qp, np2, ip, fp):
 
-# Initial setup for your plot
-plt.plot(xaxis, yaxis, label='Initial Plot')  # Replace with your initial plot data
-line, = plt.plot([], [], label='Animated Plot', color='orange')  # Line to be animated
-plt.xscale('log')
-plt.yscale('log')
-# Update function for FuncAnimation
-def update(frame):
+    volrang1 = np.linspace(iv, fv, 10)
+    volrang2 = phase2
+    volrang3 = np.linspace(qp, np2, 10)
+    volrang4 = phase4
+
+    pressrang1 = [ip] * 10
+    pressrang2 = press2
+    pressrang3 = [fp] * 10
+    pressrang4 = press2[::-1]
+
+    x = [item for sublist in [volrang1,volrang2,volrang3,volrang4] for item in sublist]
+    y = [item for sublist in [pressrang1, pressrang2,pressrang3, pressrang4] for item in sublist]
+
+    x_show = []
+    y_show = []
+
+    # Initial setup for your plot
+    plt.plot(xaxis, yaxis, label='Water Saturation Dome')  # Replace with your initial plot data
+    line, = plt.plot([], [], label='Carnot Cycle Plot', color='orange')  # Line to be animated
     plt.xscale('log')
     plt.yscale('log')
-    x_show.append(x[frame])
-    y_show.append(y[frame])
-    line.set_data(x_show, y_show)
-    return line,
+    # Update function for FuncAnimation
+    def update(frame):
+        plt.xscale('log')
+        plt.yscale('log')
+        x_show.append(x[frame])
+        y_show.append(y[frame])
+        line.set_data(x_show, y_show)
+        return line,
 
-# Create animation
-ani = FuncAnimation(plt.gcf(), update, frames=range(len(x)), blit=True, interval = 300)
+        # Function to save the figure
+        def onclick(event):
+            plt.pause(5)
+            plt.gcf().savefig('saved_graph.png')
+            print("Graph saved as 'saved_graph.png'")
 
-plt.legend()
-plt.show()
+        # Connect the click event to the onclick function
+        plt.gcf().canvas.mpl_connect('button_press_event', onclick)
+
+    # Create animation
+    ani = FuncAnimation(plt.gcf(), update, frames=range(len(x)), blit=True, interval = 300)
+
+    plt.legend()
+    plt.show()
+
+# plotter(initvol, finvol, qual_phase, new_phase, initpres, fin_press)
